@@ -108,17 +108,17 @@ class GeminiAdapter(BaseLLMAdapter):
         # gemini超时时间是毫秒
         self.timeout = timeout * 1000
 
-        self._client = genai.Client(api_key=self.api_key,http_options=types.HttpOptions(base_url=base_url,timeout=self.timeout))
+        genai.configure(api_key=self.api_key)
+        self._model = genai.GenerativeModel(self.model_name)
 
     def invoke(self, prompt: str) -> str:
         try:
-            response = self._client.models.generate_content(
-                model = self.model_name,
-                contents = prompt,
-                config = types.GenerateContentConfig(
+            response = self._model.generate_content(
+                contents=prompt,
+                generation_config=genai.types.GenerationConfig(
                     max_output_tokens=self.max_tokens,
                     temperature=self.temperature,
-                ),
+                )
             )
             if response and response.text:
                 return response.text
