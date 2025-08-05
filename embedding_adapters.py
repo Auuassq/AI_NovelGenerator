@@ -5,6 +5,7 @@ import traceback
 from typing import List
 import requests
 from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+from proxy_manager import proxy_manager
 
 def ensure_openai_base_url_has_v1(url: str) -> str:
     """
@@ -109,7 +110,9 @@ class OllamaEmbeddingAdapter(BaseEmbeddingAdapter):
             "prompt": text
         }
         try:
-            response = requests.post(url, json=data)
+            # 使用代理管理器的session
+            session = proxy_manager.get_session()
+            response = session.post(url, json=data)
             response.raise_for_status()
             result = response.json()
             if "embedding" not in result:
@@ -140,7 +143,9 @@ class MLStudioEmbeddingAdapter(BaseEmbeddingAdapter):
                 "input": texts,
                 "model": self.model_name
             }
-            response = requests.post(self.url, json=payload, headers=self.headers)
+            # 使用代理管理器的session
+            session = proxy_manager.get_session()
+            response = session.post(self.url, json=payload, headers=self.headers)
             response.raise_for_status()
             result = response.json()
             if "data" not in result:
@@ -160,7 +165,9 @@ class MLStudioEmbeddingAdapter(BaseEmbeddingAdapter):
                 "input": query,
                 "model": self.model_name
             }
-            response = requests.post(self.url, json=payload, headers=self.headers)
+            # 使用代理管理器的session
+            session = proxy_manager.get_session()
+            response = session.post(self.url, json=payload, headers=self.headers)
             response.raise_for_status()
             result = response.json()
             if "data" not in result or not result["data"]:
@@ -204,6 +211,11 @@ class GeminiEmbeddingAdapter(BaseEmbeddingAdapter):
         """
         直接调用 Google Generative Language API (Gemini) 接口，获取文本 embedding
         """
+        # 添加调试信息：显示文本长度和字节大小
+        text_length = len(text)
+        text_bytes = len(text.encode('utf-8'))
+        logging.info(f"Gemini embedding - 文本长度: {text_length} 字符, {text_bytes} 字节")
+
         url = f"{self.base_url}/{self.model_name}:embedContent?key={self.api_key}"
         payload = {
             "model": self.model_name,
@@ -215,14 +227,20 @@ class GeminiEmbeddingAdapter(BaseEmbeddingAdapter):
         }
 
         try:
-            response = requests.post(url, json=payload)
-            print(response.text)
+            # 使用代理管理器的session
+            session = proxy_manager.get_session()
+            response = session.post(url, json=payload)
+            logging.info(f"Gemini API响应状态码: {response.status_code}")
+            if response.status_code != 200:
+                logging.error(f"Gemini API响应内容: {response.text}")
             response.raise_for_status()
             result = response.json()
             embedding_data = result.get("embedding", {})
             return embedding_data.get("values", [])
         except requests.exceptions.RequestException as e:
-            logging.error(f"Gemini embed_content request error: {e}\n{traceback.format_exc()}")
+            logging.error(f"Gemini embed_content request error: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                logging.error(f"Gemini API响应内容: {e.response.text}")
             return []
         except Exception as e:
             logging.error(f"Gemini embed_content parse error: {e}\n{traceback.format_exc()}")
@@ -253,7 +271,9 @@ class SiliconFlowEmbeddingAdapter(BaseEmbeddingAdapter):
         for text in texts:
             try:
                 self.payload["input"] = text
-                response = requests.post(self.url, json=self.payload, headers=self.headers)
+                # 使用代理管理器的session
+                session = proxy_manager.get_session()
+                response = session.post(self.url, json=self.payload, headers=self.headers)
                 response.raise_for_status()
                 result = response.json()
                 if not result or "data" not in result or not result["data"]:
@@ -273,7 +293,9 @@ class SiliconFlowEmbeddingAdapter(BaseEmbeddingAdapter):
     def embed_query(self, query: str) -> List[float]:
         try:
             self.payload["input"] = query
-            response = requests.post(self.url, json=self.payload, headers=self.headers)
+            # 使用代理管理器的session
+            session = proxy_manager.get_session()
+            response = session.post(self.url, json=self.payload, headers=self.headers)
             response.raise_for_status()
             result = response.json()
             if not result or "data" not in result or not result["data"]:

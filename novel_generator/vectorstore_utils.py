@@ -6,7 +6,11 @@
 import os
 import logging
 import traceback
-import nltk
+import jieba
+import jieba.posseg as pseg
+
+# 关闭jieba的DEBUG模式，避免输出详细日志
+jieba.setLogLevel(20)  # 设置为INFO级别，避免DEBUG信息
 import numpy as np
 import re
 import ssl
@@ -141,35 +145,35 @@ def split_by_length(text: str, max_length: int = 500):
 def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similarity_threshold: float = 0.7):
     """
     对新的章节文本进行分段后,再用于存入向量库。
-    使用 embedding 进行文本相似度计算。
+    使用 jieba 进行中文文本分词。
     """
     if not chapter_text.strip():
         return []
     
-    nltk.download('punkt', quiet=True)
-    nltk.download('punkt_tab', quiet=True)
-    sentences = nltk.sent_tokenize(chapter_text)
-    if not sentences:
+    # 使用jieba进行分词
+    words = list(jieba.cut(chapter_text))
+    
+    if not words:
         return []
     
-    # 直接按长度分段,不做相似度合并
+    # 直接按长度分段，基于词语边界
     final_segments = []
     current_segment = []
     current_length = 0
     
-    for sentence in sentences:
-        sentence_length = len(sentence)
-        if current_length + sentence_length > max_length:
+    for word in words:
+        word_length = len(word)
+        if current_length + word_length > max_length:
             if current_segment:
-                final_segments.append(" ".join(current_segment))
-            current_segment = [sentence]
-            current_length = sentence_length
+                final_segments.append(''.join(current_segment))
+            current_segment = [word]
+            current_length = word_length
         else:
-            current_segment.append(sentence)
-            current_length += sentence_length
+            current_segment.append(word)
+            current_length += word_length
     
     if current_segment:
-        final_segments.append(" ".join(current_segment))
+        final_segments.append(''.join(current_segment))
     
     return final_segments
 

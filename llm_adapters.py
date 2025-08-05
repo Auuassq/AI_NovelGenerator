@@ -12,6 +12,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.ai.inference.models import SystemMessage, UserMessage
 from openai import OpenAI
 import requests
+from proxy_manager import proxy_manager
 
 
 def check_base_url(url: str) -> str:
@@ -52,6 +53,10 @@ class DeepSeekAdapter(BaseLLMAdapter):
         self.temperature = temperature
         self.timeout = timeout
 
+        # 应用代理设置（通过环境变量）
+        if proxy_manager.enabled:
+            proxy_manager._apply_proxy_settings()
+
         self._client = ChatOpenAI(
             model=self.model_name,
             api_key=self.api_key,
@@ -79,6 +84,10 @@ class OpenAIAdapter(BaseLLMAdapter):
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.timeout = timeout
+
+        # 应用代理设置（通过环境变量）
+        if proxy_manager.enabled:
+            proxy_manager._apply_proxy_settings()
 
         self._client = ChatOpenAI(
             model=self.model_name,
