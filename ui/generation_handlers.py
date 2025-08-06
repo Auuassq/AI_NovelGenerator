@@ -445,22 +445,69 @@ def import_knowledge_handler(self):
                 emb_format = self.embedding_interface_format_var.get().strip()
                 emb_model = self.embedding_model_name_var.get().strip()
 
-                # 尝试不同编码读取文件
+                # 尝试自动检测编码
                 content = None
-                encodings = ['utf-8', 'gbk', 'gb2312', 'ansi']
+                detected_encoding = None
+                
+                try:
+                    import chardet
+                    # 读取部分文件内容进行编码检测
+                    with open(selected_file, 'rb') as f:
+                        raw_data = f.read(8192)  # 读取前8KB进行检测
+                        detection_result = chardet.detect(raw_data)
+                        detected_encoding = detection_result.get('encoding')
+                        confidence = detection_result.get('confidence', 0)
+                        self.safe_log(f"检测到编码: {detected_encoding} (置信度: {confidence:.2f})")
+                except ImportError:
+                    self.safe_log("chardet库未安装，使用预设编码列表")
+                except Exception as e:
+                    self.safe_log(f"编码检测失败: {str(e)}，使用预设编码列表")
+                
+                # 构建编码尝试列表，优先中文编码
+                encodings = []
+                if detected_encoding:
+                    encodings.append(detected_encoding)
+                
+                # 添加常见中文编码（优先级高）
+                common_encodings = ['gbk', 'cp936', 'gb2312', 'gb18030', 'utf-8', 'utf-8-sig']
+                for enc in common_encodings:
+                    if enc not in encodings:
+                        encodings.append(enc)
+                
+                # 添加其他可能的编码
+                other_encodings = ['big5', 'cp950', 'windows-1252', 'iso-8859-1']
+                for enc in other_encodings:
+                    if enc not in encodings:
+                        encodings.append(enc)
+                
+                # 尝试用不同编码读取文件
+                last_error = None
                 for encoding in encodings:
                     try:
                         with open(selected_file, 'r', encoding=encoding) as f:
                             content = f.read()
+                            self.safe_log(f"✅ 成功使用 {encoding} 编码读取文件")
                             break
-                    except UnicodeDecodeError:
+                    except UnicodeDecodeError as e:
+                        last_error = f"Unicode解码错误 ({encoding}): {str(e)}"
+                        self.safe_log(f"❌ {encoding} 编码失败: {str(e)}")
                         continue
+                    except FileNotFoundError as e:
+                        last_error = f"文件未找到: {str(e)}"
+                        self.safe_log(f"❌ 文件未找到: {str(e)}")
+                        break
+                    except PermissionError as e:
+                        last_error = f"文件权限错误: {str(e)}"
+                        self.safe_log(f"❌ 文件权限错误: {str(e)}")
+                        break
                     except Exception as e:
-                        self.safe_log(f"读取文件时发生错误: {str(e)}")
-                        raise
+                        last_error = f"读取文件时发生未知错误 ({encoding}): {str(e)}"
+                        self.safe_log(f"❌ 使用 {encoding} 编码时发生错误: {str(e)}")
+                        continue
 
                 if content is None:
-                    raise Exception("无法以任何已知编码格式读取文件")
+                    error_msg = f"无法以任何编码格式读取文件。最后错误: {last_error}" if last_error else "无法以任何编码格式读取文件"
+                    raise Exception(error_msg)
 
                 # 创建临时UTF-8文件
                 import tempfile

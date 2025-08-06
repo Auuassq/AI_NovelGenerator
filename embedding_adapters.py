@@ -227,9 +227,9 @@ class GeminiEmbeddingAdapter(BaseEmbeddingAdapter):
         }
 
         try:
-            # 使用代理管理器的session
+            # 使用代理管理器的session，添加超时设置
             session = proxy_manager.get_session()
-            response = session.post(url, json=payload)
+            response = session.post(url, json=payload, timeout=30)  # 设置30秒超时
             logging.info(f"Gemini API响应状态码: {response.status_code}")
             if response.status_code != 200:
                 logging.error(f"Gemini API响应内容: {response.text}")
