@@ -10,4 +10,12 @@ from .chapter import (
 )
 from .finalization import finalize_chapter, enrich_chapter_text
 from .knowledge import import_knowledge_file
+from .knowledge_parser import KnowledgeParser, parse_knowledge_from_file
+from .knowledge_structures import (
+    WorldView, Character, PlotOutline, StructuredKnowledge,
+    WorldViewElement, CharacterAbility, CharacterRelationship,
+    PlotPoint, PlotLine, Conflict, RelationshipNetwork, KnowledgeMetadata,
+    create_worldview_element, create_character, create_plot_point, create_conflict
+)
+from .review_generator import generate_book_review
 from .vectorstore_utils import clear_vector_store

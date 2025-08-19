@@ -1,6 +1,7 @@
 # ui/main_window.py
 # -*- coding: utf-8 -*-
 import os
+import json
 import threading
 import logging
 import traceback
@@ -33,6 +34,7 @@ from ui.directory_tab import build_directory_tab, load_chapter_blueprint, save_c
 from ui.character_tab import build_character_tab, load_character_state, save_character_state
 from ui.summary_tab import build_summary_tab, load_global_summary, save_global_summary
 from ui.chapters_tab import build_chapters_tab, refresh_chapters_list, on_chapter_selected, load_chapter_content, save_current_chapter, prev_chapter, next_chapter
+from ui.knowledge_tab import KnowledgeTab
 
 class NovelGeneratorGUI:
     """
@@ -138,6 +140,9 @@ class NovelGeneratorGUI:
         build_character_tab(self)
         build_summary_tab(self)
         build_chapters_tab(self)
+        
+        # 添加知识库管理标签页
+        self.build_knowledge_tab()
 
     # ----------------- 通用辅助函数 -----------------
     def show_tooltip(self, key: str):
@@ -337,6 +342,47 @@ class NovelGeneratorGUI:
                 self._role_lib.window.destroy()
         
         self._role_lib = RoleLibrary(self.master, save_path, llm_adapter)  # 新增参数
+
+    def check_knowledge_base_status(self):
+        """检查知识库状态并更新UI显示"""
+        try:
+            filepath = self.filepath_var.get().strip()
+            if not filepath:
+                self.knowledge_status_label.configure(text="(未设置保存路径)", text_color="orange")
+                self.use_knowledge_checkbox.configure(state="disabled")
+                return
+            
+            knowledge_file = os.path.join(filepath, "extracted_knowledge.json")
+            if os.path.exists(knowledge_file):
+                # 检查文件是否有效
+                try:
+                    with open(knowledge_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    if data and isinstance(data, dict):
+                        self.knowledge_status_label.configure(text="✅ 知识库可用", text_color="green")
+                        self.use_knowledge_checkbox.configure(state="normal")
+                    else:
+                        self.knowledge_status_label.configure(text="❌ 知识库文件损坏", text_color="red")
+                        self.use_knowledge_checkbox.configure(state="disabled")
+                except:
+                    self.knowledge_status_label.configure(text="❌ 知识库文件损坏", text_color="red")
+                    self.use_knowledge_checkbox.configure(state="disabled")
+            else:
+                self.knowledge_status_label.configure(text="❌ 未找到知识库", text_color="red")
+                self.use_knowledge_checkbox.configure(state="disabled")
+                
+        except Exception as e:
+            self.knowledge_status_label.configure(text="❌ 检查失败", text_color="red")
+            self.use_knowledge_checkbox.configure(state="disabled")
+
+    def build_knowledge_tab(self):
+        """构建知识库管理标签页"""
+        # 添加知识库标签页
+        self.tabview.add("📚 知识库")
+        knowledge_frame = self.tabview.tab("📚 知识库")
+        
+        # 创建知识库管理实例
+        self.knowledge_tab = KnowledgeTab(knowledge_frame, self)
 
     # ----------------- 将导入的各模块函数直接赋给类方法 -----------------
     generate_novel_architecture_ui = generate_novel_architecture_ui

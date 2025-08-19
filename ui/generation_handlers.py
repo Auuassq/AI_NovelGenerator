@@ -61,7 +61,8 @@ def generate_novel_architecture_ui(self):
                 temperature=temperature,
                 max_tokens=max_tokens,
                 timeout=timeout_val,
-                user_guidance=user_guidance  # 添加内容指导参数
+                user_guidance=user_guidance,  # 添加内容指导参数
+                use_knowledge_base=self.use_knowledge_base_var.get()  # 新增知识库集成参数
             )
             self.safe_log("✅ 小说架构生成完成。请在 'Novel Architecture' 标签页查看或编辑。")
         except Exception:

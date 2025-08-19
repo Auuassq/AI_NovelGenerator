@@ -64,8 +64,35 @@ def build_novel_params_area(self, start_row=1):
     if hasattr(self, 'user_guidance_default') and self.user_guidance_default:
         self.user_guide_text.insert("0.0", self.user_guidance_default)
 
-    # 7) 可选元素：核心人物/关键道具/空间坐标/时间压力
-    row_idx = 6
+    # 7) 知识库集成选项
+    row_knowledge = 6
+    create_label_with_help_for_novel_params(self, parent=self.params_frame, label_text="知识库集成:", tooltip_key="use_knowledge_base", row=row_knowledge, column=0, font=("Microsoft YaHei", 12))
+    knowledge_frame = ctk.CTkFrame(self.params_frame)
+    knowledge_frame.grid(row=row_knowledge, column=1, padx=5, pady=5, sticky="ew")
+    knowledge_frame.columnconfigure(0, weight=1)
+    
+    self.use_knowledge_base_var = ctk.BooleanVar(value=False)
+    self.use_knowledge_checkbox = ctk.CTkCheckBox(
+        knowledge_frame, 
+        text="使用已有知识库辅助生成架构", 
+        variable=self.use_knowledge_base_var,
+        font=("Microsoft YaHei", 12)
+    )
+    self.use_knowledge_checkbox.pack(side="left", padx=10, pady=5)
+    
+    self.knowledge_status_label = ctk.CTkLabel(
+        knowledge_frame, 
+        text="", 
+        font=("Microsoft YaHei", 10),
+        text_color="gray"
+    )
+    self.knowledge_status_label.pack(side="left", padx=10, pady=5)
+    
+    # 检查知识库状态
+    self.check_knowledge_base_status()
+
+    # 8) 可选元素：核心人物/关键道具/空间坐标/时间压力
+    row_idx = 7
     create_label_with_help_for_novel_params(self, parent=self.params_frame, label_text="核心人物:", tooltip_key="characters_involved", row=row_idx, column=0, font=("Microsoft YaHei", 12))
     
     # 核心人物输入框+按钮容器

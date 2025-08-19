@@ -52,6 +52,7 @@ def invoke_with_cleaning(llm_adapter, prompt: str, max_retries: int = 3) -> str:
     
     result = ""
     retry_count = 0
+    last_error = None
     
     while retry_count < max_retries:
         try:
@@ -59,19 +60,33 @@ def invoke_with_cleaning(llm_adapter, prompt: str, max_retries: int = 3) -> str:
             print("\n" + "="*50)
             print("LLM 返回的内容:")
             print("-"*50)
-            print(result)
+            print(result if result else "[空响应]")
             print("="*50 + "\n")
             
             # 清理结果中的特殊格式标记
-            result = result.replace("```", "").strip()
             if result:
-                return result
+                result = result.replace("```json", "").replace("```", "").strip()
+                if result:
+                    logging.info(f"LLM调用成功，返回{len(result)}字符")
+                    return result
+            
+            logging.warning(f"LLM返回空内容，重试 ({retry_count + 1}/{max_retries})")
             retry_count += 1
+            if retry_count < max_retries:
+                time.sleep(2)  # 重试前等待2秒
+                
         except Exception as e:
+            last_error = e
+            logging.error(f"LLM调用失败 ({retry_count + 1}/{max_retries}): {str(e)}")
             print(f"调用失败 ({retry_count + 1}/{max_retries}): {str(e)}")
             retry_count += 1
-            if retry_count >= max_retries:
-                raise e
+            if retry_count < max_retries:
+                time.sleep(2)  # 重试前等待2秒
     
+    # 所有重试都失败后的处理
+    if last_error:
+        logging.error(f"LLM调用彻底失败，所有{max_retries}次重试均失败: {last_error}")
+        print(f"⚠️ LLM调用彻底失败，所有{max_retries}次重试均失败")
+        
     return result
 
